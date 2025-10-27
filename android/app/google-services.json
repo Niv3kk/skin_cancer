@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "166891855889",
+    "project_id": "skin-f1016",
+    "storage_bucket": "skin-f1016.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:166891855889:android:ae8d1ef89de4d26bf851b0",
+        "android_client_info": {
+          "package_name": "com.danielalvarez.skindetector.skin_cancer_detector"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYEMXP7VFS3UB9OqF2lyNSosNtZ3d3hKw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

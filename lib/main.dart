@@ -1,14 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:skin_cancer_detector/presentation/screens/onboarding_screen.dart'; // Importamos la nueva pantalla
+// --- CAMBIO 1: Importamos Firebase Core y las opciones de configuración ---
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart'; // Archivo generado por FlutterFire CLI
+
+import 'package:skin_cancer_detector/presentation/screens/onboarding_screen.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 
-void main() {
-  // Asegúrate de que Flutter esté inicializado
+// --- CAMBIO 2: La función main ahora es async ---
+void main() async {
+  // --- CAMBIO 3: Aseguramos la inicialización de los bindings ---
+  // Es necesario antes de llamar a Firebase.initializeApp y MobileAds.initialize
   WidgetsFlutterBinding.ensureInitialized();
-  // Inicializa el SDK de anuncios móviles
+
+  // --- CAMBIO 4: Inicializamos Firebase ---
+  // Esto debe hacerse antes de cualquier otra operación de Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Inicializamos el SDK de anuncios móviles (esto ya lo tenías)
   MobileAds.instance.initialize();
 
+  // Ejecutamos la aplicación
   runApp(const MyApp());
 }
 
@@ -21,27 +35,39 @@ class MyApp extends StatelessWidget {
       title: 'Detector de Cáncer de Piel',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // Define el tema principal de la app
-        primarySwatch: Colors.cyan,
-        scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Roboto', // Puedes cambiar la fuente si quieres
-        textTheme: const TextTheme(
-          headlineSmall: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold, color: Colors.black87),
-          bodyMedium: TextStyle(fontSize: 16.0, color: Colors.black54, height: 1.5),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.cyan[700],
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30.0),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+          primarySwatch: Colors.cyan, // Mantenemos tu tema
+          scaffoldBackgroundColor: Colors.white,
+          fontFamily: 'Roboto',
+          textTheme: const TextTheme(
+            headlineSmall: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold, color: Colors.black87),
+            bodyMedium: TextStyle(fontSize: 16.0, color: Colors.black54, height: 1.5),
           ),
-        ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              // Mantenemos tu estilo de botón
+              backgroundColor: const Color(0xFF11E9C4), // Usando tu color kPrimaryColor
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30.0), // Borde más redondeado como en Login
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+              textStyle: const TextStyle(fontWeight: FontWeight.bold), // Añadido para consistencia
+            ),
+          ),
+          // Añadimos estilo para OutlinedButton para consistencia
+          outlinedButtonTheme: OutlinedButtonThemeData(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF11E9C4), // Color del texto y borde
+                side: const BorderSide(color: Color(0xFF11E9C4), width: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0), // Bordes consistentes
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+              )
+          )
       ),
-      // La pantalla inicial ahora es OnboardingScreen
-      home: OnboardingScreen(),
+      home: const OnboardingScreen(), // Mantenemos Onboarding como pantalla inicial
     );
   }
 }
