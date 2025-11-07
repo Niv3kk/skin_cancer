@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 // --- CAMBIO 1: Importamos login_screen para tener acceso al enum 'UserRole' ---
 import 'package:skin_cancer_detector/presentation/screens/login_screen.dart';
+import 'package:skin_cancer_detector/presentation/screens/home_screen.dart';
 
 // Modelo de datos para cada sección de ayuda (sin cambios)
 class InfoTopic {

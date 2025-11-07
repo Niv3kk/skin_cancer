@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:skin_cancer_detector/presentation/screens/login_screen.dart';
 
+// --- AÑADIMOS LA IMPORTACIÓN DEL SERVICIO DE AUTENTICACIÓN ---
+import 'package:skin_cancer_detector/auth_service.dart';
+
 // Color primario de la app
 const Color kPrimaryColor = Color(0xFF11E9C4);
 
 class AccountScreen extends StatelessWidget {
-  // --- CAMBIO 1: Añadimos la variable para recibir el nombre ---
   final String userName;
   final String userEmail;
 
-  // --- CAMBIO 2: Actualizamos el constructor ---
   const AccountScreen({super.key, required this.userName, required this.userEmail});
 
   @override
@@ -74,8 +75,6 @@ class AccountScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // --- CAMBIO 3: Mostramos el nombre del usuario ---
               Text(
                 userName,
                 style: const TextStyle(
@@ -84,7 +83,6 @@ class AccountScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-
               const Text(
                 "Estás registrado como",
                 style: TextStyle(fontSize: 16, color: Colors.black54),
@@ -119,7 +117,13 @@ class AccountScreen extends StatelessWidget {
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  onPressed: () {
+                  // --- ESTA ES LA SECCIÓN MODIFICADA ---
+                  onPressed: () async {
+                    // 1. Llama al servicio para cerrar sesión (Google y Firebase)
+                    await AuthService().signOut();
+
+                    // 2. Navega a la pantalla de Login
+                    if (!context.mounted) return;
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(
                         builder: (context) => const LoginScreen(),
@@ -127,6 +131,7 @@ class AccountScreen extends StatelessWidget {
                           (route) => false,
                     );
                   },
+                  // --- FIN DE LA MODIFICACIÓN ---
                   child: const Text(
                     "CERRAR SESIÓN",
                     style: TextStyle(

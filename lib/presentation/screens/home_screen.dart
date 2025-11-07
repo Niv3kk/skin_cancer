@@ -12,6 +12,8 @@ import 'package:skin_cancer_detector/presentation/screens/login_screen.dart';
 
 const Color kPrimaryColor = Color(0xFF11E9C4);
 
+enum UserRole { user, admin }
+
 class HomeScreen extends StatefulWidget {
   final String userEmail;
   final UserRole userRole;
