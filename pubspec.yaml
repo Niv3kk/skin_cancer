@@ -36,6 +36,8 @@ dependencies:
   firebase_auth: ^5.0.0    # Para la autenticación
   firebase_database: ^11.0.0 # Para Realtime Database
   google_sign_in: ^6.2.1
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

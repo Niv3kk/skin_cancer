@@ -1,22 +1,9 @@
+// lib/presentation/screens/history_screen.dart
+
 import 'package:flutter/material.dart';
-
-// --- MODELO DE DATOS ACTUALIZADO ---
-// Se divide 'diagnosis' en 'diagnosisType' y 'diagnosisDescription'.
-class ScanHistoryItem {
-  final String imagePath;
-  final String date;
-  final String recognition;
-  final String diagnosisType;
-  final String diagnosisDescription;
-
-  ScanHistoryItem({
-    required this.imagePath,
-    required this.date,
-    required this.recognition,
-    required this.diagnosisType,
-    required this.diagnosisDescription,
-  });
-}
+// --- IMPORTAMOS LOS ARCHIVOS NUEVOS ---
+import 'package:skin_cancer_detector/core/models/scan_history_item.dart';
+import 'package:skin_cancer_detector/services/database_helper.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -29,64 +16,108 @@ class _HistoryScreenState extends State<HistoryScreen> {
   final List<String> _filters = ['Todo', 'Espalda', 'Pecho', 'Rostro'];
   int _selectedFilterIndex = 0;
 
-  // --- LISTA DE EJEMPLO ACTUALIZADA CON LA NUEVA ESTRUCTURA ---
-  final List<ScanHistoryItem> _historyItems = [
-    ScanHistoryItem(
-      imagePath: 'assets/images/scan_1.png',
-      date: '12/03/2025',
-      recognition: '89%',
-      diagnosisType: 'Melanoma',
-      diagnosisDescription: 'La imagen presenta signos compatibles con una posible lesión tipo melanoma. Se recomienda consultar a un dermatólogo para una evaluación profesional y confirmar el diagnóstico.',
-    ),
-    ScanHistoryItem(
-      imagePath: 'assets/images/scan_1.png',
-      date: '15/03/2025',
-      recognition: '85%',
-      diagnosisType: 'Carcinoma Basocelular',
-      diagnosisDescription: 'Se observa una lesión cutánea con características típicas de un carcinoma basocelular. Es fundamental la revisión por un especialista.',
-    ),
-    ScanHistoryItem(
-      imagePath: 'assets/images/scan_1.png',
-      date: '20/03/2025',
-      recognition: '79%',
-      diagnosisType: 'Queratosis Actínica',
-      diagnosisDescription: 'Se detectan signos consistentes con queratosis actínica. Se aconseja seguimiento y posible tratamiento médico.',
-    ),
-    ScanHistoryItem(
+  // --- ESTO ES NUEVO ---
+  // Usamos un Future para cargar los datos de la DB
+  late Future<List<ScanHistoryItem>> _historyItemsFuture;
+  final dbHelper = DatabaseHelper.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    // Al iniciar la pantalla, cargamos el historial de la DB
+    _refreshHistoryList();
+  }
+
+  // --- ESTO ES NUEVO ---
+  // Función para recargar la lista desde la DB
+  void _refreshHistoryList() {
+    setState(() {
+      _historyItemsFuture = dbHelper.getScans();
+    });
+  }
+
+  // --- ESTO ES NUEVO ---
+  // Función para eliminar un item
+  void _deleteItem(int id) async {
+    await dbHelper.deleteScan(id);
+    _refreshHistoryList(); // Recargamos la lista
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Historial eliminado')));
+    }
+  }
+
+  // --- ESTO ES NUEVO (PARA PRUEBAS) ---
+  // Un botón temporal para añadir un escaneo de prueba
+  void _addTestScan() async {
+    final newItem = ScanHistoryItem(
       imagePath: 'assets/images/scan_1.png',
       date: '25/03/2025',
       recognition: '91%',
-      diagnosisType: 'Nevus Atípico',
-      diagnosisDescription: 'La imagen muestra un nevus con algunas características atípicas. Se sugiere un control dermatoscópico detallado.',
-    ),
-    ScanHistoryItem(
-      imagePath: 'assets/images/scan_1.png',
-      date: '30/03/2025',
-      recognition: '70%',
-      diagnosisType: 'Lesión Benigna',
-      diagnosisDescription: 'Los indicadores sugieren una lesión de naturaleza benigna. Sin embargo, ante cualquier cambio, consulte a un especialista.',
-    ),
-  ];
+      diagnosisType: 'Prueba de DB',
+      diagnosisDescription: 'Este item fue añadido desde la base de datos.',
+    );
+    await dbHelper.addScan(newItem);
+    _refreshHistoryList(); // Recargamos la lista
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      // --- BOTÓN DE PRUEBA PARA AÑADIR DATOS ---
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addTestScan,
+        child: const Icon(Icons.add),
+        backgroundColor: const Color(0xFF11E9C4),
+      ),
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(context),
             _buildFilters(),
+            // --- ESTO ESTÁ MODIFICADO ---
+            // Usamos un FutureBuilder para esperar a que la DB responda
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-                itemCount: _historyItems.length,
-                itemBuilder: (context, index) {
-                  final item = _historyItems[index];
-                  return _HistoryCard(
-                    item: item,
-                    onDelete: () {
-                      print('Eliminar: ${item.diagnosisType}');
+              child: FutureBuilder<List<ScanHistoryItem>>(
+                future: _historyItemsFuture,
+                builder: (context, snapshot) {
+                  // Caso 1: Cargando...
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  // Caso 2: Error
+                  if (snapshot.hasError) {
+                    return const Center(
+                        child: Text('Error al cargar el historial'));
+                  }
+                  // Caso 3: Éxito (pero no hay datos)
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No hay historial de escaneos.',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    );
+                  }
+
+                  // Caso 4: Éxito (y hay datos)
+                  final historyItems = snapshot.data!;
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0, vertical: 10.0),
+                    itemCount: historyItems.length,
+                    itemBuilder: (context, index) {
+                      final item = historyItems[index];
+                      return _HistoryCard(
+                        item: item,
+                        onDelete: () {
+                          // Llamamos a _deleteItem con el ID de la DB
+                          if (item.id != null) {
+                            _deleteItem(item.id!);
+                          }
+                        },
+                      );
                     },
                   );
                 },
@@ -98,7 +129,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  // --- EL RESTO DE TUS WIDGETS (Header, Filters, Card) ---
+  // --- NO HAN SIDO MODIFICADOS ---
+  // ... (Pega aquí tus widgets _buildHeader, _buildFilters, y la clase _HistoryCard)
+  // ...
   Widget _buildHeader(BuildContext context) {
+    // ... (Tu código de _buildHeader)
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       child: Column(
@@ -129,6 +165,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildFilters() {
+    // ... (Tu código de _buildFilters)
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -166,8 +203,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 }
 
-// --- TARJETA DE HISTORIAL CON EL NUEVO DISEÑO ---
 class _HistoryCard extends StatelessWidget {
+  // ... (Tu código de _HistoryCard)
   final ScanHistoryItem item;
   final VoidCallback onDelete;
 

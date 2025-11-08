@@ -4,6 +4,9 @@ import 'package:skin_cancer_detector/presentation/screens/login_screen.dart';
 // --- AÑADIMOS LA IMPORTACIÓN DEL SERVICIO DE AUTENTICACIÓN ---
 import 'package:skin_cancer_detector/auth_service.dart';
 
+// --- AÑADIMOS LA IMPORTACIÓN DEL HELPER DE LA BASE DE DATOS ---
+import 'package:skin_cancer_detector/services/database_helper.dart';
+
 // Color primario de la app
 const Color kPrimaryColor = Color(0xFF11E9C4);
 
@@ -39,9 +42,11 @@ class AccountScreen extends StatelessWidget {
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: kPrimaryColor,
+                    // --- ESTA ES LA LÍNEA CORREGIDA ---
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
+                    // --- FIN DE LA CORRECCIÓN ---
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 10,
@@ -117,12 +122,16 @@ class AccountScreen extends StatelessWidget {
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  // --- ESTA ES LA SECCIÓN MODIFICADA ---
+                  // --- ESTA ES LA SECCIÓN MODIFICADA Y ACTUALIZADA ---
                   onPressed: () async {
-                    // 1. Llama al servicio para cerrar sesión (Google y Firebase)
+
+                    // --- 1. BORRA EL HISTORIAL DE SQLITE ---
+                    await DatabaseHelper.instance.clearHistory();
+
+                    // --- 2. CIERRA SESIÓN EN GOOGLE Y FIREBASE ---
                     await AuthService().signOut();
 
-                    // 2. Navega a la pantalla de Login
+                    // --- 3. NAVEGA AL LOGIN ---
                     if (!context.mounted) return;
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(
