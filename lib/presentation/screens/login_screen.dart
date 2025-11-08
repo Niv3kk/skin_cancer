@@ -216,6 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 20),
                       _buildDivider(),
                       const SizedBox(height: 20),
+                      // --- ESTA ES LA SECCIÓN MODIFICADA ---
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -224,17 +225,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               // *** CAMBIO: Llamar a _signInWithGoogle ***
                               _isLoading ? (){} : _signInWithGoogle
                           ),
-                          const SizedBox(width: 20),
-                          _buildSocialButton(
-                              'assets/images/facebook_logo.png', () {
-                            // Dejamos Facebook deshabilitado por ahora
-                            if (_isLoading) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Login con Facebook no implementado.'))
-                            );
-                          }),
+                          // --- BOTÓN DE FACEBOOK Y SPACER ELIMINADOS ---
                         ],
                       ),
+                      // --- FIN DE LA MODIFICACIÓN ---
                     ],
                   ),
                 ),
