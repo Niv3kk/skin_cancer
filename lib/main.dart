@@ -22,7 +22,7 @@ void main() async {
   // Inicializamos el SDK de anuncios móviles (esto ya lo tenías)
   MobileAds.instance.initialize();
 
-  // Ejecutamos la aplicación
+
   runApp(const MyApp());
 }
 
