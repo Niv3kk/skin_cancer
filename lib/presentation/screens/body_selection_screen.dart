@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:skin_cancer_detector/presentation/screens/account_screen.dart';
+import 'package:skin_cancer_detector/presentation/screens/skin_scan_screen.dart';
+import 'package:skin_cancer_detector/services/permissions_service.dart';
+import 'package:skin_cancer_detector/presentation/screens/skin_scan_screen.dart';
 
 // Color primario de la app
 const Color kPrimaryColor = Color(0xFF11E9C4);
@@ -313,8 +316,7 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: () {
-            // Validación mínima (buena práctica UX)
+          onPressed: () async {
             if (_selectedLesionOption == null || _selectedBodyPart == null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -324,9 +326,28 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
               return;
             }
 
-            // TODO: navegar a cámara / escáner
-            debugPrint('Opción: $_selectedLesionOption | Cuerpo: $_selectedBodyPart');
+            // ✅ PEDIR PERMISOS
+            final granted = await PermissionsService.requestCameraAndGallery();
+
+            if (!granted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Necesitamos acceso a la cámara y galería para continuar.',
+                  ),
+                ),
+              );
+              return;
+            }
+
+            // ✅ IR AL ESCÁNER
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const SkinScanScreen(),
+              ),
+            );
           },
+
           style: ElevatedButton.styleFrom(
             backgroundColor: kPrimaryColor,
             foregroundColor: Colors.white,
