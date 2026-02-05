@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; // Archivo generado por FlutterFire CLI
 
 import 'package:skin_cancer_detector/presentation/screens/onboarding_screen.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 
 // --- CAMBIO 2: La función main ahora es async ---
@@ -19,8 +18,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Inicializamos el SDK de anuncios móviles (esto ya lo tenías)
-  MobileAds.instance.initialize();
+
 
 
   runApp(const MyApp());
