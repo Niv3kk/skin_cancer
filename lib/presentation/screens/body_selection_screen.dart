@@ -156,25 +156,34 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
         children: [
           Image.asset('assets/images/splash_logo.png', height: 150),
           const SizedBox(height: 10),
-          TextButton.icon(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_ios_new, size: 16),
-            label: const Text(
-              'Selecciona una zona para continuar',
-            ),
-            style: TextButton.styleFrom(
-              backgroundColor: kPrimaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+
+          // ✅ Botón de navegación: ATRÁS
+          Align(
+            alignment: Alignment.centerLeft, // ✅ fuerza izquierda
+            child: TextButton.icon(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back_ios_new, size: 16),
+              label: const Text(
+                'Atrás',
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
+              style: TextButton.styleFrom(
+                backgroundColor: kPrimaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ),
+
+
           const SizedBox(height: 12),
+
+          // Perfil (Juanito)
           Align(
             alignment: Alignment.centerRight,
             child: TextButton.icon(
@@ -199,6 +208,20 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
                   color: Colors.black54,
                   fontWeight: FontWeight.bold,
                 ),
+              ),
+            ),
+          ),
+
+          // ✅ Título movido debajo del perfil
+          const SizedBox(height: 8),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Cuéntanos qué cambio observas y dónde se encuentra',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
             ),
           ),
@@ -265,6 +288,7 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
                 ),
               ),
               const SizedBox(width: 10),
+
               // Ícono a la derecha
               ClipRRect(
                 borderRadius: BorderRadius.circular(999),
