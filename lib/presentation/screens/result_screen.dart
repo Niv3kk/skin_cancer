@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:skin_cancer_detector/services/tflite_classifier.dart';// ✅ ajusta si tu paquete difiere
+import 'package:skin_cancer_detector/services/tflite_classifier.dart';
 
 const Color kPrimaryColor = Color(0xFF11E9C4);
 

@@ -10,16 +10,19 @@ const Color kPrimaryColor = Color(0xFF11E9C4);
 
 class ProcessingScreen extends StatefulWidget {
   final String imagePath;
+  final TfliteClassifier classifier; // ✅ viene desde SkinScanScreen
 
-  const ProcessingScreen({super.key, required this.imagePath});
+  const ProcessingScreen({
+    super.key,
+    required this.imagePath,
+    required this.classifier,
+  });
 
   @override
   State<ProcessingScreen> createState() => _ProcessingScreenState();
 }
 
 class _ProcessingScreenState extends State<ProcessingScreen> {
-  final TfliteClassifier _classifier = TfliteClassifier();
-
   double _progress = 0.0;
   Timer? _timer;
 
@@ -61,9 +64,10 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
 
   Future<void> _runInference() async {
     try {
-      await _classifier.load();
+      // ✅ NO vuelvas a crear ni a cargar el modelo aquí.
+      // Ya viene listo desde SkinScanScreen.
       final bytes = await File(widget.imagePath).readAsBytes();
-      final result = await _classifier.predictFromImageBytes(bytes);
+      final result = await widget.classifier.predictFromImageBytes(bytes);
 
       if (!mounted) return;
 
@@ -98,7 +102,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
         SnackBar(content: Text('Error analizando la imagen: $e')),
       );
 
-      // Deja que el usuario vuelva manualmente o vuelve tras un pequeño delay
       await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -108,7 +111,8 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    _classifier.dispose();
+    // ✅ NO cierres el classifier aquí porque pertenece a otra pantalla
+    // y podrías necesitarlo de nuevo.
     super.dispose();
   }
 

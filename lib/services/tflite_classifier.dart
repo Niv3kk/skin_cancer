@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 
@@ -18,63 +19,79 @@ class ClassificationResult {
 
 class TfliteClassifier {
   Interpreter? _interpreter;
-  late final int _h;
-  late final int _w;
-  late final TensorType _inType;
 
-  // ✅ Según tu Python:
+  int _h = 0;
+  int _w = 0;
+  TensorType _inType = TensorType.float32;
+  int _numClasses = 0;
+
   final List<String> _labels = const ["lunar", "melanoma", "piel_sana"];
 
   Future<void> load() async {
     if (_interpreter != null) return;
 
-    final options = InterpreterOptions()..threads = 2;
+    try {
+      // ✅ Cargar bytes del asset (evita problemas de path)
+      final data = await rootBundle.load('assets/models/modelo_v5.tflite');
+      final bytes = data.buffer.asUint8List();
+      // ignore: avoid_print
+      print('✅ TFLite bytes=${bytes.length}');
 
-    // ✅ Importante: sin "assets/"
-    _interpreter = await Interpreter.fromAsset(
-      'assets/models/modelo_v5.tflite',
-      options: options,
-    );
+      final options = InterpreterOptions()..threads = 2;
 
-    final input = _interpreter!.getInputTensor(0);
-    final shape = input.shape; // [1,H,W,3]
-    _h = shape[1];
-    _w = shape[2];
-    _inType = input.type;
+      _interpreter = Interpreter.fromBuffer(bytes, options: options);
 
-    final out = _interpreter!.getOutputTensor(0);
-    // ignore: avoid_print
-    print('TFLite input: shape=$shape type=$_inType');
-    // ignore: avoid_print
-    print('TFLite output: shape=${out.shape} type=${out.type}');
+      // ✅ MUY IMPORTANTE
+      _interpreter!.allocateTensors();
+
+      final input = _interpreter!.getInputTensor(0);
+      final inShape = input.shape; // [1,H,W,3]
+      _inType = input.type;
+
+      if (inShape.length != 4 || inShape[0] != 1 || inShape[3] != 3) {
+        throw StateError('Input shape inesperado: $inShape');
+      }
+
+      _h = inShape[1];
+      _w = inShape[2];
+
+      final out = _interpreter!.getOutputTensor(0);
+      final outShape = out.shape; // [1,N]
+      if (outShape.length != 2 || outShape[0] != 1) {
+        throw StateError('Output shape inesperado: $outShape');
+      }
+      _numClasses = outShape[1];
+
+      // ignore: avoid_print
+      print('✅ Interpreter OK | input=$inShape $_inType | out=$outShape ${out.type}');
+    } catch (e) {
+      // ignore: avoid_print
+      print('❌ Error load(): $e');
+      rethrow;
+    }
   }
 
   Future<ClassificationResult> predictFromImageBytes(Uint8List imageBytes) async {
-    if (_interpreter == null) {
-      throw StateError('Llama load() antes de predictFromImageBytes().');
+    final interpreter = _interpreter;
+    if (interpreter == null) {
+      throw StateError('Modelo no cargado. Llama load() primero.');
     }
 
     final decoded = img.decodeImage(imageBytes);
-    if (decoded == null) {
-      throw Exception('No se pudo decodificar la imagen.');
-    }
+    if (decoded == null) throw Exception('No se pudo decodificar la imagen.');
 
-    final resized = img.copyResize(decoded, width: _w, height: _h);
+    final oriented = img.bakeOrientation(decoded);
+    final resized = img.copyResize(oriented, width: _w, height: _h);
 
-    // ✅ Input EXACTO como Python
-    final input = _buildInput(resized);
+    // ✅ Input 4D REAL: [1][H][W][3]
+    final input = _buildInput4D(resized);
 
-    // Output: [1, N]
-    final outTensor = _interpreter!.getOutputTensor(0);
-    final outShape = outTensor.shape; // ej [1,3]
-    final n = outShape.reduce((a, b) => a * b);
+    // ✅ Output 2D: [1][N]
+    final output = List.generate(1, (_) => List.filled(_numClasses, 0.0));
 
-    // ✅ Output robusto: Float32List
-    final outputBuffer = Float32List(n);
+    interpreter.run(input, output);
 
-    _interpreter!.run(input, outputBuffer);
-
-    final probs = outputBuffer.map((e) => e.toDouble()).toList();
+    final probs = (output[0]).map((e) => (e as num).toDouble()).toList();
 
     final bestIdx = _argMax(probs);
     final conf = probs[bestIdx];
@@ -88,35 +105,28 @@ class TfliteClassifier {
     );
   }
 
-  /// Replica MobileNetV2 preprocess: (x/127.5) - 1.0
-  dynamic _buildInput(img.Image image) {
-    // OJO: getPixel devuelve Pixel con r,g,b
-    if (_inType == TensorType.float32) {
-      final floats = Float32List(1 * _h * _w * 3);
-      int i = 0;
-      for (int y = 0; y < _h; y++) {
-        for (int x = 0; x < _w; x++) {
-          final p = image.getPixel(x, y);
-          floats[i++] = (p.r / 127.5) - 1.0;
-          floats[i++] = (p.g / 127.5) - 1.0;
-          floats[i++] = (p.b / 127.5) - 1.0;
-        }
-      }
-      return floats;
-    }
+  /// MobileNetV2 preprocess: (x/127.5) - 1.0
+  List<List<List<List<double>>>> _buildInput4D(img.Image image) {
+    final input = List.generate(
+      1,
+          (_) => List.generate(
+        _h,
+            (_) => List.generate(
+          _w,
+              (_) => List.filled(3, 0.0),
+        ),
+      ),
+    );
 
-    // Fallback uint8 (si tu modelo fuese cuantizado)
-    final bytes = Uint8List(1 * _h * _w * 3);
-    int i = 0;
     for (int y = 0; y < _h; y++) {
       for (int x = 0; x < _w; x++) {
         final p = image.getPixel(x, y);
-        bytes[i++] = p.r.toInt();
-        bytes[i++] = p.g.toInt();
-        bytes[i++] = p.b.toInt();
+        input[0][y][x][0] = (p.r / 127.5) - 1.0;
+        input[0][y][x][1] = (p.g / 127.5) - 1.0;
+        input[0][y][x][2] = (p.b / 127.5) - 1.0;
       }
     }
-    return bytes;
+    return input;
   }
 
   int _argMax(List<double> v) {

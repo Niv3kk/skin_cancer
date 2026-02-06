@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:skin_cancer_detector/presentation/screens/processing_screen.dart';
-
+import 'package:skin_cancer_detector/services/tflite_classifier.dart';
 const Color kPrimaryColor = Color(0xFF11E9C4);
 
 class SkinScanScreen extends StatefulWidget {
@@ -19,12 +19,28 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
   Future<void>? _cameraFuture;
   XFile? _selectedImage;
 
-  bool _isBusy = false; // solo para bloquear UI al navegar/capturar
+  bool _isBusy = false;
+
+  // ✅ Modelo
+  final TfliteClassifier _classifier = TfliteClassifier();
+  bool _modelReady = false;
 
   @override
   void initState() {
     super.initState();
     _initCamera();
+    _initModel();
+  }
+
+  Future<void> _initModel() async {
+    try {
+      await _classifier.load(); // ✅ SIEMPRE antes de analizar
+      if (!mounted) return;
+      setState(() => _modelReady = true);
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('Error cargando modelo IA: $e');
+    }
   }
 
   Future<void> _initCamera() async {
@@ -52,6 +68,8 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
   @override
   void dispose() {
     _cameraController?.dispose();
+    // OJO: NO hagas dispose del classifier si lo reutilizas entre pantallas.
+    // Si quieres cerrarlo al salir totalmente de la app, hazlo en un singleton/provider.
     super.dispose();
   }
 
@@ -70,7 +88,6 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
     try {
       if (_cameraController == null) return;
 
-      // Espera a que la cámara termine de inicializar
       await (_cameraFuture ?? Future.value());
 
       if (!_cameraController!.value.isInitialized) {
@@ -90,14 +107,15 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
     }
   }
 
-
-  /// ✅ NUEVA LÓGICA:
-  /// - Si no hay imagen: toma foto
-  /// - Si ya hay imagen: ir a ProcessingScreen (ahí se analiza con TFLite)
   Future<void> _onScanPressed() async {
     if (_isBusy) return;
 
-    // 1) si no hay imagen aún, capturar primero
+    // Si aún carga el modelo, no permitas seguir
+    if (!_modelReady) {
+      _showSnack('El modelo aún se está cargando. Intenta de nuevo en 2 segundos.');
+      return;
+    }
+
     if (_selectedImage == null) {
       setState(() => _isBusy = true);
       try {
@@ -108,12 +126,14 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
       return;
     }
 
-    // 2) si hay imagen, navegar a procesamiento
     setState(() => _isBusy = true);
     try {
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => ProcessingScreen(imagePath: _selectedImage!.path),
+          builder: (_) => ProcessingScreen(
+            imagePath: _selectedImage!.path,
+            classifier: _classifier, // ✅ PASAMOS EL MODELO LISTO
+          ),
         ),
       );
     } finally {
@@ -133,8 +153,6 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
         child: Column(
           children: [
             _buildHeader(context),
-
-            /// Vista cámara / imagen
             Expanded(
               child: Stack(
                 alignment: Alignment.center,
@@ -145,7 +163,6 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
                 ],
               ),
             ),
-
             _buildControls(),
           ],
         ),
@@ -153,7 +170,6 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
     );
   }
 
-  // ================= HEADER =================
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -172,16 +188,13 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.help_outline),
-            onPressed: () {
-              // TODO: mostrar ayuda
-            },
+            onPressed: () {},
           ),
         ],
       ),
     );
   }
 
-  // ================= PREVIEW =================
   Widget _buildPreview() {
     if (_selectedImage != null) {
       return Image.file(
@@ -207,7 +220,6 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
     );
   }
 
-  // ================= OVERLAY =================
   Widget _buildOverlayGuide() {
     return IgnorePointer(
       child: Stack(
@@ -245,7 +257,6 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
     );
   }
 
-  // ================= CONTROLS =================
   Widget _buildControls() {
     return Container(
       color: Colors.white,
@@ -256,12 +267,12 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.photo_library_outlined),
-                onPressed: _isBusy ? null : _pickFromGallery,
+                onPressed: (_isBusy || !_modelReady) ? null : _pickFromGallery,
                 tooltip: 'Cargar desde galería',
               ),
               const Spacer(),
               ElevatedButton(
-                onPressed: _isBusy ? null : _onScanPressed,
+                onPressed: (_isBusy || !_modelReady) ? null : _onScanPressed,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kPrimaryColor,
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
@@ -270,7 +281,9 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
                   ),
                 ),
                 child: Text(
-                  _selectedImage == null ? 'Tomar foto' : 'Realizar escaneo',
+                  !_modelReady
+                      ? 'Cargando IA...'
+                      : (_selectedImage == null ? 'Tomar foto' : 'Realizar escaneo'),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -284,9 +297,11 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            _selectedImage == null
+            !_modelReady
+                ? 'Cargando modelo de IA...'
+                : (_selectedImage == null
                 ? 'Coloca la lesión dentro del círculo y toma una foto'
-                : 'Pulsa “Realizar escaneo” para analizar la imagen',
+                : 'Pulsa “Realizar escaneo” para analizar la imagen'),
             style: const TextStyle(color: Colors.black54),
             textAlign: TextAlign.center,
           ),
