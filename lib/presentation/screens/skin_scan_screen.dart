@@ -3,6 +3,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:skin_cancer_detector/presentation/screens/processing_screen.dart';
+
 const Color kPrimaryColor = Color(0xFF11E9C4);
 
 class SkinScanScreen extends StatefulWidget {
@@ -17,6 +19,8 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
   Future<void>? _cameraFuture;
   XFile? _selectedImage;
 
+  bool _isBusy = false; // solo para bloquear UI al navegar/capturar
+
   @override
   void initState() {
     super.initState();
@@ -24,19 +28,25 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
   }
 
   Future<void> _initCamera() async {
-    final cameras = await availableCameras();
-    final camera = cameras.firstWhere(
-          (c) => c.lensDirection == CameraLensDirection.back,
-    );
+    try {
+      final cameras = await availableCameras();
+      final camera = cameras.firstWhere(
+            (c) => c.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
 
-    _cameraController = CameraController(
-      camera,
-      ResolutionPreset.high,
-      enableAudio: false,
-    );
+      _cameraController = CameraController(
+        camera,
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
 
-    _cameraFuture = _cameraController!.initialize();
-    setState(() {});
+      _cameraFuture = _cameraController!.initialize();
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('Error inicializando cámara: $e');
+    }
   }
 
   @override
@@ -46,6 +56,8 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
   }
 
   Future<void> _pickFromGallery() async {
+    if (_isBusy) return;
+
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
 
@@ -55,10 +67,62 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
   }
 
   Future<void> _takePicture() async {
-    if (!_cameraController!.value.isInitialized) return;
+    try {
+      if (_cameraController == null) return;
 
-    final image = await _cameraController!.takePicture();
-    setState(() => _selectedImage = image);
+      // Espera a que la cámara termine de inicializar
+      await (_cameraFuture ?? Future.value());
+
+      if (!_cameraController!.value.isInitialized) {
+        _showSnack('La cámara aún no está lista.');
+        return;
+      }
+
+      if (_cameraController!.value.isTakingPicture) return;
+
+      final image = await _cameraController!.takePicture();
+      if (!mounted) return;
+
+      setState(() => _selectedImage = image);
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('No se pudo tomar la foto: $e');
+    }
+  }
+
+
+  /// ✅ NUEVA LÓGICA:
+  /// - Si no hay imagen: toma foto
+  /// - Si ya hay imagen: ir a ProcessingScreen (ahí se analiza con TFLite)
+  Future<void> _onScanPressed() async {
+    if (_isBusy) return;
+
+    // 1) si no hay imagen aún, capturar primero
+    if (_selectedImage == null) {
+      setState(() => _isBusy = true);
+      try {
+        await _takePicture();
+      } finally {
+        if (mounted) setState(() => _isBusy = false);
+      }
+      return;
+    }
+
+    // 2) si hay imagen, navegar a procesamiento
+    setState(() => _isBusy = true);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ProcessingScreen(imagePath: _selectedImage!.path),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
@@ -77,6 +141,7 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
                 children: [
                   _buildPreview(),
                   _buildOverlayGuide(),
+                  if (_isBusy) _buildBusyOverlay(),
                 ],
               ),
             ),
@@ -97,7 +162,7 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back_ios_new),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: _isBusy ? null : () => Navigator.of(context).pop(),
           ),
           const SizedBox(width: 4),
           const Text(
@@ -123,6 +188,7 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
         File(_selectedImage!.path),
         fit: BoxFit.cover,
         width: double.infinity,
+        height: double.infinity,
       );
     }
 
@@ -144,24 +210,37 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
   // ================= OVERLAY =================
   Widget _buildOverlayGuide() {
     return IgnorePointer(
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.transparent),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 3),
-              ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 220,
+            height: 220,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
             ),
-            const Icon(Icons.add, color: Colors.white, size: 36),
-          ],
-        ),
+          ),
+          const Icon(Icons.add, color: Colors.white, size: 36),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusyOverlay() {
+    return Container(
+      color: Colors.black.withOpacity(0.35),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          CircularProgressIndicator(),
+          SizedBox(height: 12),
+          Text(
+            'Preparando...',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ],
       ),
     );
   }
@@ -177,11 +256,12 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.photo_library_outlined),
-                onPressed: _pickFromGallery,
+                onPressed: _isBusy ? null : _pickFromGallery,
+                tooltip: 'Cargar desde galería',
               ),
               const Spacer(),
               ElevatedButton(
-                onPressed: _takePicture,
+                onPressed: _isBusy ? null : _onScanPressed,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kPrimaryColor,
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
@@ -189,19 +269,26 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
-                  'Realizar escaneo',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                child: Text(
+                  _selectedImage == null ? 'Tomar foto' : 'Realizar escaneo',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               const Spacer(),
-              const SizedBox(width: 48),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _isBusy ? null : () => setState(() => _selectedImage = null),
+                tooltip: 'Limpiar imagen',
+              ),
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Coloca la lesión dentro del círculo',
-            style: TextStyle(color: Colors.black54),
+          Text(
+            _selectedImage == null
+                ? 'Coloca la lesión dentro del círculo y toma una foto'
+                : 'Pulsa “Realizar escaneo” para analizar la imagen',
+            style: const TextStyle(color: Colors.black54),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

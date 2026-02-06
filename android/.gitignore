@@ -1,14 +1,102 @@
-gradle-wrapper.jar
-/.gradle
-/captures/
-/gradlew
-/gradlew.bat
-/local.properties
-GeneratedPluginRegistrant.java
-.cxx/
+# ========= Flutter / Dart =========
+.dart_tool/
+.packages
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter/
+.pub-cache/
+coverage/
+*.log
 
-# Remember to never publicly share your keystore.
-# See https://flutter.dev/to/reference-keystore
-key.properties
-**/*.keystore
-**/*.jks
+# ========= IDEs =========
+.idea/
+.vscode/
+*.iml
+
+# ========= OS =========
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ========= Android =========
+android/.gradle/
+android/local.properties
+android/**/GeneratedPluginRegistrant.java
+
+# Keystores / signing (NO subir)
+android/app/*.keystore
+android/app/*.jks
+android/key.properties
+**/key.properties
+
+# Build outputs
+android/app/build/
+android/build/
+**/*.apk
+**/*.aab
+**/*.ap_
+**/*.dex
+**/*.class
+
+# ========= iOS =========
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/ephemeral/
+ios/Runner/GeneratedPluginRegistrant.*
+ios/Runner.xcworkspace/
+
+# Xcode user files
+ios/**/*.xcuserstate
+ios/**/*.xcuserdata/
+ios/**/*.moved-aside
+ios/**/*.pbxuser
+ios/**/*.mode1v3
+ios/**/*.mode2v3
+ios/**/*.perspectivev3
+
+# ========= macOS =========
+macos/Pods/
+macos/Flutter/ephemeral/
+macos/Runner.xcworkspace/
+macos/**/*.xcuserstate
+macos/**/*.xcuserdata/
+
+# ========= Windows =========
+windows/flutter/ephemeral/
+*.exe
+*.dll
+
+# ========= Linux =========
+linux/flutter/ephemeral/
+
+# ========= Web =========
+.web/
+web/.dart_tool/
+web/build/
+
+# ========= Firebase / Secrets =========
+# Si tienes estos archivos con credenciales, NO subir
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Si quieres subirlos al repo (a veces se suben), comenta las 2 líneas anteriores.
+
+# ========= Env / Secrets =========
+.env
+.env.*
+*.pem
+*.p12
+
+# ========= Custom: local third_party overrides =========
+# Si tu carpeta third_party contiene plugins parcheados/locales, normalmente NO se sube.
+# (Mejor: mantenerlo fuera o documentarlo)
+third_party/
+
+# Si quieres subir third_party porque es parte de tu solución, comenta la línea anterior.
