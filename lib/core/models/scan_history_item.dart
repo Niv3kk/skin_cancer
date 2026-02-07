@@ -1,62 +1,62 @@
 import 'dart:typed_data';
-import 'dart:convert';
 
 class ScanHistoryItem {
   final int? id;
 
-  // ✅ Guardamos la imagen como bytes (BLOB)
-  final Uint8List imageBytes;
+  // ✅ para tarjetas (liviano)
+  final Uint8List thumbnailBytes;
 
-  final String date;
+  // ✅ para abrir detalle con calidad
+  final String imagePath;
 
-  // Resultado principal
-  final String diagnosisType;       // MELANOMA / LUNAR / PIEL SANA
-  final String recognition;         // "100%" o lo que uses
+  final String createdAt; // ISO
+  final String bodyPart;
 
-  // ✅ Textos que quieres guardar
-  final String recommendation;      // ACCIÓN RECOMENDADA
-  final String diagnosisDescription; // DIAGNÓSTICO
+  final String label;       // lunar | melanoma | piel_sana
+  final double confidence;  // 0..1
 
-  // ✅ Detalle del análisis (labels + probs) guardado como JSON
+  final String recommendation;
+  final String diagnosis;
+
+  // JSON: {labels:[...], probs:[...]}
   final String detailsJson;
 
   ScanHistoryItem({
     this.id,
-    required this.imageBytes,
-    required this.date,
-    required this.diagnosisType,
-    required this.recognition,
+    required this.thumbnailBytes,
+    required this.imagePath,
+    required this.createdAt,
+    required this.bodyPart,
+    required this.label,
+    required this.confidence,
     required this.recommendation,
-    required this.diagnosisDescription,
+    required this.diagnosis,
     required this.detailsJson,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'imageBytes': imageBytes,
-      'date': date,
-      'diagnosisType': diagnosisType,
-      'recognition': recognition,
-      'recommendation': recommendation,
-      'diagnosisDescription': diagnosisDescription,
-      'detailsJson': detailsJson,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'thumbnailBytes': thumbnailBytes,
+    'imagePath': imagePath,
+    'createdAt': createdAt,
+    'bodyPart': bodyPart,
+    'label': label,
+    'confidence': confidence,
+    'recommendation': recommendation,
+    'diagnosis': diagnosis,
+    'detailsJson': detailsJson,
+  };
 
-  factory ScanHistoryItem.fromMap(Map<String, dynamic> map) {
-    return ScanHistoryItem(
-      id: map['id'] as int?,
-      imageBytes: map['imageBytes'] as Uint8List,
-      date: map['date'] as String,
-      diagnosisType: map['diagnosisType'] as String,
-      recognition: map['recognition'] as String,
-      recommendation: map['recommendation'] as String,
-      diagnosisDescription: map['diagnosisDescription'] as String,
-      detailsJson: map['detailsJson'] as String,
-    );
-  }
-
-  // Helpers opcionales para leer el JSON fácil
-  Map<String, dynamic> get details => jsonDecode(detailsJson) as Map<String, dynamic>;
+  factory ScanHistoryItem.fromMap(Map<String, dynamic> map) => ScanHistoryItem(
+    id: map['id'] as int?,
+    thumbnailBytes: map['thumbnailBytes'] as Uint8List,
+    imagePath: map['imagePath'] as String,
+    createdAt: map['createdAt'] as String,
+    bodyPart: map['bodyPart'] as String,
+    label: map['label'] as String,
+    confidence: (map['confidence'] as num).toDouble(),
+    recommendation: map['recommendation'] as String,
+    diagnosis: map['diagnosis'] as String,
+    detailsJson: map['detailsJson'] as String,
+  );
 }

@@ -1,3 +1,5 @@
+// lib/presentation/screens/processing_screen.dart
+
 import 'dart:async';
 import 'dart:io';
 
@@ -10,11 +12,15 @@ const Color kPrimaryColor = Color(0xFF11E9C4);
 
 class ProcessingScreen extends StatefulWidget {
   final String imagePath;
-  final TfliteClassifier classifier; // ✅ viene desde SkinScanScreen
+  final String bodyPart;
+
+  /// ✅ El classifier viene ya cargado desde SkinScanScreen
+  final TfliteClassifier classifier;
 
   const ProcessingScreen({
     super.key,
     required this.imagePath,
+    required this.bodyPart,
     required this.classifier,
   });
 
@@ -91,6 +97,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
           builder: (_) => ResultScreen(
             imagePath: widget.imagePath,
             result: result,
+            bodyPart: widget.bodyPart,
           ),
         ),
       );
@@ -111,7 +118,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    // ✅ NO cierres el classifier aquí porque pertenece a otra pantalla
+    // ✅ NO cierres el classifier aquí porque pertenece a SkinScanScreen
     // y podrías necesitarlo de nuevo.
     super.dispose();
   }
@@ -131,7 +138,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
             ),
             _CirclePreview(imagePath: widget.imagePath),
             const SizedBox(height: 18),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 26),
               child: Column(
@@ -148,14 +154,15 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                   const SizedBox(height: 10),
                   Text(
                     'PROCESAMIENTO DE IMAGEN $percent%',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 16),
-
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 26),

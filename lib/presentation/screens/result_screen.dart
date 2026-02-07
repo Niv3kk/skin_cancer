@@ -4,18 +4,23 @@ import 'package:skin_cancer_detector/services/tflite_classifier.dart';
 import 'dart:convert';
 import 'package:skin_cancer_detector/services/database_helper.dart';
 import 'package:skin_cancer_detector/core/models/scan_history_item.dart';
-
+import 'dart:typed_data';
 const Color kPrimaryColor = Color(0xFF11E9C4);
 
 class ResultScreen extends StatelessWidget {
   final String imagePath;
   final ClassificationResult result;
 
+  // ✅ NUEVO
+  final String bodyPart;
+
   const ResultScreen({
     super.key,
     required this.imagePath,
     required this.result,
+    required this.bodyPart, // ✅ NUEVO
   });
+
 
   String _prettyLabel(String raw) {
     final v = raw.trim().toLowerCase();
@@ -226,20 +231,31 @@ class ResultScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () async {
                         try {
-                          final bytes = await File(imagePath).readAsBytes();
+                          final imageFile = File(imagePath);
 
+                          // 1️⃣ Leer imagen original
+                          final imageBytes = await imageFile.readAsBytes();
+
+                          // 2️⃣ Crear thumbnail (simple por ahora)
+                          final thumbnailBytes = imageBytes.length > 200000
+                              ? imageBytes.sublist(0, 200000)
+                              : imageBytes;
+
+                          // 3️⃣ Serializar detalle del análisis
                           final detailsJson = jsonEncode({
                             'labels': result.labels,
                             'probs': result.probs,
                           });
 
                           final item = ScanHistoryItem(
-                            imageBytes: bytes,
-                            date: DateTime.now().toIso8601String(),
-                            diagnosisType: result.label.toUpperCase(), // o tu texto bonito
-                            recognition: '$confidencePct%',
+                            thumbnailBytes: thumbnailBytes,
+                            imagePath: imagePath,
+                            createdAt: DateTime.now().toIso8601String(),
+                            bodyPart: 'Sin especificar', // luego lo conectamos al body selector
+                            label: result.label,
+                            confidence: result.confidence,
                             recommendation: ui.recommendation,
-                            diagnosisDescription: ui.diagnosis,
+                            diagnosis: ui.diagnosis,
                             detailsJson: detailsJson,
                           );
 
@@ -247,15 +263,16 @@ class ResultScreen extends StatelessWidget {
 
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('✅ Guardado en historial')),
+                            const SnackBar(content: Text('Guardado en historial')),
                           );
                         } catch (e) {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error guardando: $e')),
+                            SnackBar(content: Text('Error al guardar: $e')),
                           );
                         }
                       },
+
 
                       style: ElevatedButton.styleFrom(
                         backgroundColor: kPrimaryColor,

@@ -14,39 +14,43 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 2, // ✅ subimos versión
-      onCreate: _onCreate,
-      onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          // ✅ sencillo: recrear (borra datos antiguos)
+      version: 3,
+      onCreate: (db, _) async => _create(db),
+      onUpgrade: (db, oldV, newV) async {
+        if (oldV < 3) {
+          // ✅ migración simple: se pierde historial anterior
           await db.execute('DROP TABLE IF EXISTS history');
-          await _onCreate(db, newVersion);
+          await _create(db);
         }
       },
     );
   }
 
-  Future<void> _onCreate(Database db, int version) async {
+  Future<void> _create(Database db) async {
     await db.execute('''
       CREATE TABLE history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        imageBytes BLOB NOT NULL,
-        date TEXT NOT NULL,
-        diagnosisType TEXT NOT NULL,
-        recognition TEXT NOT NULL,
+        thumbnailBytes BLOB NOT NULL,
+        imagePath TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        bodyPart TEXT NOT NULL,
+        label TEXT NOT NULL,
+        confidence REAL NOT NULL,
         recommendation TEXT NOT NULL,
-        diagnosisDescription TEXT NOT NULL,
+        diagnosis TEXT NOT NULL,
         detailsJson TEXT NOT NULL
       )
     ''');
   }
 
-  Future<List<ScanHistoryItem>> getScans() async {
+  Future<List<ScanHistoryItem>> getScans({String? bodyPart}) async {
     final db = await instance.database;
-    final scans = await db.query('history', orderBy: 'id DESC');
-    return scans.isNotEmpty
-        ? scans.map((c) => ScanHistoryItem.fromMap(c)).toList()
-        : [];
+
+    final where = (bodyPart != null && bodyPart != 'Todo') ? 'bodyPart = ?' : null;
+    final args = (where != null) ? [bodyPart] : null;
+
+    final rows = await db.query('history', where: where, whereArgs: args, orderBy: 'id DESC');
+    return rows.map((e) => ScanHistoryItem.fromMap(e)).toList();
   }
 
   Future<int> addScan(ScanHistoryItem scan) async {
@@ -54,13 +58,14 @@ class DatabaseHelper {
     return db.insert('history', scan.toMap());
   }
 
-  Future<int> deleteScan(int id) async {
-    final db = await instance.database;
-    return db.delete('history', where: 'id = ?', whereArgs: [id]);
-  }
-
   Future<void> clearHistory() async {
     final db = await instance.database;
     await db.delete('history');
+    print("Historial de SQLite borrado.");
+  }
+
+  Future<int> deleteScan(int id) async {
+    final db = await instance.database;
+    return db.delete('history', where: 'id = ?', whereArgs: [id]);
   }
 }

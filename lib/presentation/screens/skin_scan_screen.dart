@@ -8,7 +8,8 @@ import 'package:skin_cancer_detector/services/tflite_classifier.dart';
 const Color kPrimaryColor = Color(0xFF11E9C4);
 
 class SkinScanScreen extends StatefulWidget {
-  const SkinScanScreen({super.key});
+  final String bodyPart;
+  const SkinScanScreen({super.key, required this.bodyPart});
 
   @override
   State<SkinScanScreen> createState() => _SkinScanScreenState();
@@ -132,7 +133,8 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
         MaterialPageRoute(
           builder: (_) => ProcessingScreen(
             imagePath: _selectedImage!.path,
-            classifier: _classifier, // ✅ PASAMOS EL MODELO LISTO
+            bodyPart: widget.bodyPart,
+            classifier: _classifier, // ✅
           ),
         ),
       );

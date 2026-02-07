@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:skin_cancer_detector/presentation/screens/account_screen.dart';
 import 'package:skin_cancer_detector/presentation/screens/skin_scan_screen.dart';
 import 'package:skin_cancer_detector/services/permissions_service.dart';
-import 'package:skin_cancer_detector/presentation/screens/skin_scan_screen.dart';
 
 // Color primario de la app
 const Color kPrimaryColor = Color(0xFF11E9C4);
@@ -343,7 +342,9 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
             // ✅ IR AL ESCÁNER
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => const SkinScanScreen(),
+                builder: (_) => SkinScanScreen(
+                  bodyPart: _selectedBodyPart!, // ✅ se conecta
+                ),
               ),
             );
           },
