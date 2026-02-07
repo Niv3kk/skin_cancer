@@ -170,21 +170,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               ),
               const Spacer(),
-
-              // ✅ Botón exportar PDF
-              TextButton.icon(
-                onPressed: _exportPdf,
-                icon: const Icon(Icons.picture_as_pdf, size: 18),
-                label: const Text('Exportar'),
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.black87,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                ),
-              ),
             ],
           ),
         ],
