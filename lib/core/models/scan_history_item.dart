@@ -1,43 +1,62 @@
-// lib/models/scan_history_item.dart
+import 'dart:typed_data';
+import 'dart:convert';
 
 class ScanHistoryItem {
-  final int? id; // <-- ID de la base de datos (autoincremental)
-  final String imagePath;
+  final int? id;
+
+  // ✅ Guardamos la imagen como bytes (BLOB)
+  final Uint8List imageBytes;
+
   final String date;
-  final String recognition;
-  final String diagnosisType;
-  final String diagnosisDescription;
+
+  // Resultado principal
+  final String diagnosisType;       // MELANOMA / LUNAR / PIEL SANA
+  final String recognition;         // "100%" o lo que uses
+
+  // ✅ Textos que quieres guardar
+  final String recommendation;      // ACCIÓN RECOMENDADA
+  final String diagnosisDescription; // DIAGNÓSTICO
+
+  // ✅ Detalle del análisis (labels + probs) guardado como JSON
+  final String detailsJson;
 
   ScanHistoryItem({
-    this.id, // <-- ID es opcional
-    required this.imagePath,
+    this.id,
+    required this.imageBytes,
     required this.date,
-    required this.recognition,
     required this.diagnosisType,
+    required this.recognition,
+    required this.recommendation,
     required this.diagnosisDescription,
+    required this.detailsJson,
   });
 
-  // Convierte un objeto ScanHistoryItem a un Map (para insertar en DB)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'imagePath': imagePath,
+      'imageBytes': imageBytes,
       'date': date,
-      'recognition': recognition,
       'diagnosisType': diagnosisType,
+      'recognition': recognition,
+      'recommendation': recommendation,
       'diagnosisDescription': diagnosisDescription,
+      'detailsJson': detailsJson,
     };
   }
 
-  // Convierte un Map (de la DB) a un objeto ScanHistoryItem
   factory ScanHistoryItem.fromMap(Map<String, dynamic> map) {
     return ScanHistoryItem(
       id: map['id'] as int?,
-      imagePath: map['imagePath'] as String,
+      imageBytes: map['imageBytes'] as Uint8List,
       date: map['date'] as String,
-      recognition: map['recognition'] as String,
       diagnosisType: map['diagnosisType'] as String,
+      recognition: map['recognition'] as String,
+      recommendation: map['recommendation'] as String,
       diagnosisDescription: map['diagnosisDescription'] as String,
+      detailsJson: map['detailsJson'] as String,
     );
   }
+
+  // Helpers opcionales para leer el JSON fácil
+  Map<String, dynamic> get details => jsonDecode(detailsJson) as Map<String, dynamic>;
 }

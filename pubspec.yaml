@@ -46,6 +46,7 @@ dependencies:
   #para el modelo de analisis
   tflite_flutter: 0.12.1
   image: ^4.2.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

@@ -1,7 +1,8 @@
 // lib/presentation/screens/history_screen.dart
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
-// --- IMPORTAMOS LOS ARCHIVOS NUEVOS ---
+
 import 'package:skin_cancer_detector/core/models/scan_history_item.dart';
 import 'package:skin_cancer_detector/services/database_helper.dart';
 
@@ -13,86 +14,69 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  final List<String> _filters = ['Todo', 'Espalda', 'Pecho', 'Rostro'];
+  final List<String> _filters = ['Todo']; // por ahora solo "Todo"
   int _selectedFilterIndex = 0;
 
-  // --- ESTO ES NUEVO ---
-  // Usamos un Future para cargar los datos de la DB
   late Future<List<ScanHistoryItem>> _historyItemsFuture;
   final dbHelper = DatabaseHelper.instance;
 
   @override
   void initState() {
     super.initState();
-    // Al iniciar la pantalla, cargamos el historial de la DB
     _refreshHistoryList();
   }
 
-  // --- ESTO ES NUEVO ---
-  // Función para recargar la lista desde la DB
   void _refreshHistoryList() {
     setState(() {
       _historyItemsFuture = dbHelper.getScans();
     });
   }
 
-  // --- ESTO ES NUEVO ---
-  // Función para eliminar un item
-  void _deleteItem(int id) async {
+  Future<void> _deleteItem(int id) async {
     await dbHelper.deleteScan(id);
-    _refreshHistoryList(); // Recargamos la lista
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Historial eliminado')));
-    }
+    _refreshHistoryList();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Historial eliminado')),
+    );
   }
 
-  // --- ESTO ES NUEVO (PARA PRUEBAS) ---
-  // Un botón temporal para añadir un escaneo de prueba
-  void _addTestScan() async {
-    final newItem = ScanHistoryItem(
-      imagePath: 'assets/images/scan_1.png',
-      date: '25/03/2025',
-      recognition: '91%',
-      diagnosisType: 'Prueba de DB',
-      diagnosisDescription: 'Este item fue añadido desde la base de datos.',
-    );
-    await dbHelper.addScan(newItem);
-    _refreshHistoryList(); // Recargamos la lista
+  String _formatDate(String iso) {
+    // iso: 2026-02-06T01:23:45.000Z
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      String two(int n) => n.toString().padLeft(2, '0');
+      return '${two(dt.day)}/${two(dt.month)}/${dt.year}  ${two(dt.hour)}:${two(dt.minute)}';
+    } catch (_) {
+      return iso;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      // --- BOTÓN DE PRUEBA PARA AÑADIR DATOS ---
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addTestScan,
-        child: const Icon(Icons.add),
-        backgroundColor: const Color(0xFF11E9C4),
-      ),
+
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(context),
             _buildFilters(),
-            // --- ESTO ESTÁ MODIFICADO ---
-            // Usamos un FutureBuilder para esperar a que la DB responda
+
             Expanded(
               child: FutureBuilder<List<ScanHistoryItem>>(
                 future: _historyItemsFuture,
                 builder: (context, snapshot) {
-                  // Caso 1: Cargando...
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  // Caso 2: Error
+
                   if (snapshot.hasError) {
-                    return const Center(
-                        child: Text('Error al cargar el historial'));
+                    return const Center(child: Text('Error al cargar el historial'));
                   }
-                  // Caso 3: Éxito (pero no hay datos)
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+
+                  final historyItems = snapshot.data ?? const <ScanHistoryItem>[];
+                  if (historyItems.isEmpty) {
                     return const Center(
                       child: Text(
                         'No hay historial de escaneos.',
@@ -101,21 +85,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     );
                   }
 
-                  // Caso 4: Éxito (y hay datos)
-                  final historyItems = snapshot.data!;
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20.0, vertical: 10.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                     itemCount: historyItems.length,
                     itemBuilder: (context, index) {
                       final item = historyItems[index];
                       return _HistoryCard(
                         item: item,
+                        formattedDate: _formatDate(item.date),
                         onDelete: () {
-                          // Llamamos a _deleteItem con el ID de la DB
-                          if (item.id != null) {
-                            _deleteItem(item.id!);
-                          }
+                          if (item.id != null) _deleteItem(item.id!);
                         },
                       );
                     },
@@ -129,20 +108,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // --- EL RESTO DE TUS WIDGETS (Header, Filters, Card) ---
-  // --- NO HAN SIDO MODIFICADOS ---
-  // ... (Pega aquí tus widgets _buildHeader, _buildFilters, y la clase _HistoryCard)
-  // ...
   Widget _buildHeader(BuildContext context) {
-    // ... (Tu código de _buildHeader)
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       child: Column(
         children: [
           Center(
-            child: Image.asset('assets/images/splash_logo.png', height: 150),
+            child: Image.asset('assets/images/splash_logo.png', height: 120),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
@@ -155,7 +129,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
               ),
             ),
           ),
@@ -165,10 +139,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildFilters() {
-    // ... (Tu código de _buildFilters)
     return Container(
-      height: 60,
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      height: 55,
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.only(left: 20),
@@ -180,10 +153,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: ChoiceChip(
               label: Text(_filters[index]),
               selected: isSelected,
-              onSelected: (selected) {
-                setState(() {
-                  _selectedFilterIndex = index;
-                });
+              onSelected: (_) {
+                setState(() => _selectedFilterIndex = index);
               },
               backgroundColor: Colors.grey[200],
               selectedColor: const Color(0xFF11E9C4).withOpacity(0.8),
@@ -204,48 +175,80 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 class _HistoryCard extends StatelessWidget {
-  // ... (Tu código de _HistoryCard)
   final ScanHistoryItem item;
+  final String formattedDate;
   final VoidCallback onDelete;
 
-  const _HistoryCard({required this.item, required this.onDelete});
+  const _HistoryCard({
+    required this.item,
+    required this.formattedDate,
+    required this.onDelete,
+  });
+
+  List<Map<String, dynamic>> _readDetails(String jsonStr) {
+    try {
+      final obj = jsonDecode(jsonStr) as Map<String, dynamic>;
+      final labels = (obj['labels'] as List).map((e) => e.toString()).toList();
+      final probs = (obj['probs'] as List).map((e) => (e as num).toDouble()).toList();
+
+      final out = <Map<String, dynamic>>[];
+      for (int i = 0; i < labels.length && i < probs.length; i++) {
+        out.add({'label': labels[i], 'prob': probs[i]});
+      }
+      // Ordenar desc por probabilidad
+      out.sort((a, b) => (b['prob'] as double).compareTo(a['prob'] as double));
+      return out;
+    } catch (_) {
+      return const [];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final details = _readDetails(item.detailsJson);
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(14.0),
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Columna Izquierda: Imagen y Fecha
+          // Izquierda: Imagen + fecha
           Column(
             children: [
               CircleAvatar(
                 radius: 35,
-                backgroundImage: AssetImage(item.imagePath),
+                backgroundImage: MemoryImage(item.imageBytes), // ✅ BLOB -> MemoryImage
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
-                item.date,
-                style: const TextStyle(color: Colors.black, fontSize: 12),
+                formattedDate,
+                style: const TextStyle(color: Colors.black87, fontSize: 11),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
-          const SizedBox(width: 15),
-          // Columna Derecha: Información
+
+          const SizedBox(width: 14),
+
+          // Derecha: Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // fila top: reconocimiento + delete
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('RECONOCIMIENTO:', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                    const Expanded(
+                      child: Text(
+                        'RECONOCIMIENTO',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                    ),
                     Text(
                       item.recognition,
                       style: const TextStyle(
@@ -254,25 +257,66 @@ class _HistoryCard extends StatelessWidget {
                         color: Colors.black,
                       ),
                     ),
+                    const SizedBox(width: 8),
                     IconButton(
-                      icon: Icon(Icons.delete_outline, color: Colors.grey[600]),
+                      icon: Icon(Icons.delete_outline, color: Colors.grey[700]),
                       onPressed: onDelete,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 8),
-                const Text('DIAGNOSTICO:', style: TextStyle(fontSize: 12, color: Colors.black54)),
+
+                const Text(
+                  'DIAGNÓSTICO',
+                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                ),
                 Text(
-                  item.diagnosisType, // Muestra el tipo de diagnóstico aquí si quieres
+                  item.diagnosisType,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                const SizedBox(height: 4),
+
+                const SizedBox(height: 6),
                 Text(
                   item.diagnosisDescription,
                   style: const TextStyle(fontSize: 13, color: Colors.black87),
                 ),
+
+                const SizedBox(height: 10),
+                const Text(
+                  'ACCIÓN RECOMENDADA',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.recommendation,
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+
+                if (details.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  const Text(
+                    'DETALLE',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black),
+                  ),
+                  const SizedBox(height: 6),
+                  ...details.map((d) {
+                    final lbl = d['label'] as String;
+                    final prob = d['prob'] as double;
+                    final pct = (prob * 100).toStringAsFixed(2);
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(lbl, style: const TextStyle(fontSize: 12))),
+                          Text('$pct%', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
               ],
             ),
           ),

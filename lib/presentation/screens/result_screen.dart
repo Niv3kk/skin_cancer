@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:skin_cancer_detector/services/tflite_classifier.dart';
+import 'dart:convert';
+import 'package:skin_cancer_detector/services/database_helper.dart';
+import 'package:skin_cancer_detector/core/models/scan_history_item.dart';
 
 const Color kPrimaryColor = Color(0xFF11E9C4);
 
@@ -221,11 +224,39 @@ class ResultScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Pendiente: guardar en historial')),
-                        );
+                      onPressed: () async {
+                        try {
+                          final bytes = await File(imagePath).readAsBytes();
+
+                          final detailsJson = jsonEncode({
+                            'labels': result.labels,
+                            'probs': result.probs,
+                          });
+
+                          final item = ScanHistoryItem(
+                            imageBytes: bytes,
+                            date: DateTime.now().toIso8601String(),
+                            diagnosisType: result.label.toUpperCase(), // o tu texto bonito
+                            recognition: '$confidencePct%',
+                            recommendation: ui.recommendation,
+                            diagnosisDescription: ui.diagnosis,
+                            detailsJson: detailsJson,
+                          );
+
+                          await DatabaseHelper.instance.addScan(item);
+
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('✅ Guardado en historial')),
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error guardando: $e')),
+                          );
+                        }
                       },
+
                       style: ElevatedButton.styleFrom(
                         backgroundColor: kPrimaryColor,
                         foregroundColor: Colors.white,
