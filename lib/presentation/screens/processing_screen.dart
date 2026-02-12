@@ -14,6 +14,9 @@ class ProcessingScreen extends StatefulWidget {
   final String imagePath;
   final String bodyPart;
 
+  // ✅ NUEVO: síntoma seleccionado antes del escaneo
+  final String symptom;
+
   /// ✅ El classifier viene ya cargado desde SkinScanScreen
   final TfliteClassifier classifier;
 
@@ -21,6 +24,7 @@ class ProcessingScreen extends StatefulWidget {
     super.key,
     required this.imagePath,
     required this.bodyPart,
+    required this.symptom, // ✅ NUEVO
     required this.classifier,
   });
 
@@ -70,8 +74,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
 
   Future<void> _runInference() async {
     try {
-      // ✅ NO vuelvas a crear ni a cargar el modelo aquí.
-      // Ya viene listo desde SkinScanScreen.
+      // ✅ Ya viene listo desde SkinScanScreen.
       final bytes = await File(widget.imagePath).readAsBytes();
       final result = await widget.classifier.predictFromImageBytes(bytes);
 
@@ -98,6 +101,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
             imagePath: widget.imagePath,
             result: result,
             bodyPart: widget.bodyPart,
+            symptom: widget.symptom, // ✅ NUEVO: lo pasamos al ResultScreen
           ),
         ),
       );
@@ -119,7 +123,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
   void dispose() {
     _timer?.cancel();
     // ✅ NO cierres el classifier aquí porque pertenece a SkinScanScreen
-    // y podrías necesitarlo de nuevo.
     super.dispose();
   }
 

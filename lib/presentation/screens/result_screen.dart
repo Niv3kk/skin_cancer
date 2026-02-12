@@ -5,22 +5,26 @@ import 'dart:convert';
 import 'package:skin_cancer_detector/services/database_helper.dart';
 import 'package:skin_cancer_detector/core/models/scan_history_item.dart';
 import 'dart:typed_data';
+
 const Color kPrimaryColor = Color(0xFF11E9C4);
 
 class ResultScreen extends StatelessWidget {
   final String imagePath;
   final ClassificationResult result;
 
-  // ✅ NUEVO
+  // ✅ Ya lo tenías
   final String bodyPart;
+
+  // ✅ NUEVO: síntoma seleccionado antes del escaneo
+  final String symptom;
 
   const ResultScreen({
     super.key,
     required this.imagePath,
     required this.result,
-    required this.bodyPart, // ✅ NUEVO
+    required this.bodyPart,
+    required this.symptom,
   });
-
 
   String _prettyLabel(String raw) {
     final v = raw.trim().toLowerCase();
@@ -37,11 +41,26 @@ class ResultScreen extends StatelessWidget {
     }
   }
 
+  String _prettySymptom(String raw) {
+    final v = raw.trim().toLowerCase();
+
+    // Ajusta estos strings a los que realmente guardas desde tu pantalla de síntomas
+    if (v.isEmpty) return 'No hay cambios notables';
+    if (v.contains('no hay')) return 'No hay cambios notables';
+    if (v.contains('morf')) return 'Cambio morfológico';
+    if (v.contains('pic')) return 'Picazón';
+    if (v.contains('sang')) return 'Sangrado';
+
+    // fallback
+    return raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     final confidencePct = (result.confidence * 100).round();
-    final ui = _resultToUi(result.label, result.confidence);
+    final ui = _resultToUi(result.label, result.confidence, symptom);
     final mainLabel = _prettyLabel(result.label);
+    final symptomPretty = _prettySymptom(symptom);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -83,7 +102,6 @@ class ResultScreen extends StatelessWidget {
                 children: [
                   _SmallCirclePreview(imagePath: imagePath),
                   const SizedBox(width: 14),
-
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,6 +133,16 @@ class ResultScreen extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        const SizedBox(height: 6),
+                        // ✅ NUEVO: mostramos el síntoma elegido
+                        Text(
+                          'Síntoma reportado: $symptomPretty',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black.withOpacity(0.65),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -124,7 +152,7 @@ class ResultScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // ✅ DETALLES con más espacio
+            // ✅ DETALLES
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -164,7 +192,7 @@ class ResultScreen extends StatelessWidget {
 
                         const SizedBox(height: 14),
 
-                        Text(
+                        const Text(
                           'DETALLE DEL ANÁLISIS',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
@@ -209,7 +237,7 @@ class ResultScreen extends StatelessWidget {
               ),
             ),
 
-            // Botones abajo (igual que antes)
+            // Botones abajo
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
               child: Row(
@@ -236,7 +264,7 @@ class ResultScreen extends StatelessWidget {
                           // 1️⃣ Leer imagen original
                           final imageBytes = await imageFile.readAsBytes();
 
-                          // 2️⃣ Crear thumbnail (simple por ahora)
+                          // 2️⃣ Thumbnail simple
                           final thumbnailBytes = imageBytes.length > 200000
                               ? imageBytes.sublist(0, 200000)
                               : imageBytes;
@@ -245,6 +273,7 @@ class ResultScreen extends StatelessWidget {
                           final detailsJson = jsonEncode({
                             'labels': result.labels,
                             'probs': result.probs,
+                            'symptom': symptom, // ✅ guardamos el síntoma aquí (sin tocar DB)
                           });
 
                           final item = ScanHistoryItem(
@@ -272,8 +301,6 @@ class ResultScreen extends StatelessWidget {
                           );
                         }
                       },
-
-
                       style: ElevatedButton.styleFrom(
                         backgroundColor: kPrimaryColor,
                         foregroundColor: Colors.white,
@@ -323,31 +350,87 @@ class _ResultUi {
   const _ResultUi({required this.recommendation, required this.diagnosis});
 }
 
-_ResultUi _resultToUi(String label, double confidence) {
+bool _isHighRiskSymptom(String symptom) {
+  final v = symptom.trim().toLowerCase();
+  return v.contains('sang') || v.contains('morf'); // sangrado o cambio morfológico
+}
+
+bool _isMediumRiskSymptom(String symptom) {
+  final v = symptom.trim().toLowerCase();
+  return v.contains('pic'); // picazón
+}
+
+_ResultUi _resultToUi(String label, double confidence, String symptom) {
   final confPct = confidence * 100;
+  final highRisk = _isHighRiskSymptom(symptom);
+  final mediumRisk = _isMediumRiskSymptom(symptom);
+
+  // Texto corto reutilizable
+  String symptomLine(String s) {
+    final p = s.trim();
+    if (p.isEmpty) return '';
+    return 'Síntoma reportado: $p.';
+  }
 
   switch (label) {
     case 'melanoma':
       return _ResultUi(
-        recommendation:
-        'Solicitar una consulta médica con un dermatólogo para confirmar el resultado del análisis y recibir el tratamiento adecuado a tiempo.',
+        recommendation: highRisk
+            ? 'Por el resultado y el síntoma reportado, se recomienda atención prioritaria con un dermatólogo lo antes posible. ${symptomLine(symptom)}'
+            : 'Solicitar una consulta médica con un dermatólogo para confirmar el resultado del análisis y recibir el tratamiento adecuado a tiempo. ${symptomLine(symptom)}',
         diagnosis:
         'La imagen presenta signos compatibles con una posible lesión tipo melanoma. Se recomienda consultar a un dermatólogo para una evaluación profesional.',
       );
 
     case 'lunar':
+      if (highRisk) {
+        return _ResultUi(
+          recommendation:
+          'Aunque el modelo sugiere “lunar”, el síntoma reportado es de riesgo. Se recomienda consulta médica pronta para descartar complicaciones. ${symptomLine(symptom)}',
+          diagnosis:
+          'La lesión se asemeja a un lunar, pero por los síntomas reportados se sugiere evaluación profesional.',
+        );
+      }
+      if (mediumRisk) {
+        return _ResultUi(
+          recommendation: confPct >= 80
+              ? 'Monitorea el lunar. Si la picazón persiste o empeora, consulta a un dermatólogo. ${symptomLine(symptom)}'
+              : 'El resultado no es concluyente. Intenta una foto más nítida y considera una consulta médica si la picazón continúa. ${symptomLine(symptom)}',
+          diagnosis:
+          'La lesión se asemeja a un lunar. Recuerda vigilar cualquier cambio con el tiempo.',
+        );
+      }
+
       return _ResultUi(
         recommendation: confPct >= 80
-            ? 'Monitorea el lunar y consulta a un dermatólogo si notas cambios (tamaño, forma, color, sangrado o picazón).'
-            : 'El resultado no es concluyente. Intenta una foto más nítida y considera una consulta médica si tienes dudas.',
+            ? 'Monitorea el lunar y consulta a un dermatólogo si notas cambios (tamaño, forma, color, sangrado o picazón). ${symptomLine(symptom)}'
+            : 'El resultado no es concluyente. Intenta una foto más nítida y considera una consulta médica si tienes dudas. ${symptomLine(symptom)}',
         diagnosis: 'La lesión se asemeja a un lunar. Recuerda vigilar cualquier cambio con el tiempo.',
       );
 
     case 'piel_sana':
+      if (highRisk) {
+        return _ResultUi(
+          recommendation:
+          'Aunque el modelo sugiere “piel sana”, el síntoma reportado puede requerir evaluación. Se recomienda consulta preventiva con un dermatólogo. ${symptomLine(symptom)}',
+          diagnosis:
+          'La imagen es compatible con piel sana según el modelo, pero existen síntomas reportados que deben considerarse.',
+        );
+      }
+      if (mediumRisk) {
+        return _ResultUi(
+          recommendation: confPct >= 80
+              ? 'No se detectan señales relevantes. Si la picazón persiste, consulta a un profesional. ${symptomLine(symptom)}'
+              : 'El resultado no es concluyente. Intenta otra foto con mejor iluminación. Si la picazón continúa, considera una consulta. ${symptomLine(symptom)}',
+          diagnosis:
+          'La imagen es compatible con piel sana según el modelo.',
+        );
+      }
+
       return _ResultUi(
         recommendation: confPct >= 80
-            ? 'No se detectan señales relevantes. Mantén protección solar y revisiones periódicas.'
-            : 'El resultado no es concluyente. Intenta otra foto con mejor iluminación.',
+            ? 'No se detectan señales relevantes. Mantén protección solar y revisiones periódicas. ${symptomLine(symptom)}'
+            : 'El resultado no es concluyente. Intenta otra foto con mejor iluminación. ${symptomLine(symptom)}',
         diagnosis: 'La imagen es compatible con piel sana según el modelo.',
       );
 

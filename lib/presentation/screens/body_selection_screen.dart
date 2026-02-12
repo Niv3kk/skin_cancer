@@ -42,6 +42,22 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
     'Espalda',
   ];
 
+  // 🔹 Convertimos enum a texto estable (importante para ResultScreen)
+  String _lesionOptionToText(LesionOption option) {
+    switch (option) {
+      case LesionOption.ninguno:
+        return 'No hay cambios notables';
+      case LesionOption.cambioMorfologico:
+        return 'Cambio morfológico';
+      case LesionOption.picazon:
+        return 'Picazón';
+      case LesionOption.sangrado:
+        return 'Sangrado';
+      case LesionOption.inflamacion:
+        return 'Inflamación';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,52 +67,46 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
           children: [
             _buildHeader(context),
 
-            /// Formulario
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
                     const SizedBox(height: 6),
+
                     _buildRadioCard(
                       value: LesionOption.ninguno,
                       title: 'Ninguno',
                       subtitle: 'No hay cambios notables.',
-                      // ✅ CAMBIA ESTA RUTA por la de tu ícono:
                       iconAssetPath: 'assets/images/picazon.png',
                     ),
                     _buildRadioCard(
                       value: LesionOption.cambioMorfologico,
                       title: 'Cambio morfológico',
                       subtitle: 'Ha cambiado el tamaño, la forma o el color.',
-                      // ✅ CAMBIA ESTA RUTA por la de tu ícono:
                       iconAssetPath: 'assets/images/color.png',
                     ),
                     _buildRadioCard(
                       value: LesionOption.picazon,
                       title: 'Picazón',
                       subtitle: 'Se siente con picor o irritado.',
-                      // ✅ CAMBIA ESTA RUTA por la de tu ícono:
                       iconAssetPath: 'assets/images/normal.png',
                     ),
                     _buildRadioCard(
                       value: LesionOption.sangrado,
                       title: 'Sangrado',
                       subtitle: 'Presencia de sangre o secreción de líquidos.',
-                      // ✅ CAMBIA ESTA RUTA por la de tu ícono:
                       iconAssetPath: 'assets/images/sangrado.png',
                     ),
                     _buildRadioCard(
                       value: LesionOption.inflamacion,
                       title: 'Inflamación',
                       subtitle: 'Enrojecimiento, hinchazón o una llaga que no cicatriza.',
-                      // ✅ CAMBIA ESTA RUTA por la de tu ícono:
                       iconAssetPath: 'assets/images/llagaNoCicatriza.png',
                     ),
 
                     const SizedBox(height: 18),
 
-                    // "CUERPO" => combobox
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
@@ -109,6 +119,7 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
+
                     DropdownButtonFormField<String>(
                       value: _selectedBodyPart,
                       items: _bodyParts
@@ -159,33 +170,25 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
           Image.asset('assets/images/splash_logo.png', height: 150),
           const SizedBox(height: 10),
 
-          // ✅ Botón de navegación: ATRÁS
           Align(
-            alignment: Alignment.centerLeft, // ✅ fuerza izquierda
+            alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.arrow_back_ios_new, size: 16),
-              label: const Text(
-                'Atrás',
-              ),
+              label: const Text('Atrás'),
               style: TextButton.styleFrom(
                 backgroundColor: kPrimaryColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
             ),
           ),
 
-
           const SizedBox(height: 12),
 
-          // Perfil (Juanito)
           Align(
             alignment: Alignment.centerRight,
             child: TextButton.icon(
@@ -214,8 +217,8 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
             ),
           ),
 
-          // ✅ Título movido debajo del perfil
           const SizedBox(height: 8),
+
           const Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -232,7 +235,7 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
     );
   }
 
-  // ================= RADIO ITEM =================
+  // ================= RADIO =================
   Widget _buildRadioCard({
     required LesionOption value,
     required String title,
@@ -264,7 +267,6 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Radio<LesionOption>(
                 value: value,
@@ -277,29 +279,19 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
+                    Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(fontSize: 13, color: Colors.black54, height: 1.3),
+                      style: const TextStyle(fontSize: 13, color: Colors.black54),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 10),
-
-              // Ícono a la derecha
               ClipRRect(
                 borderRadius: BorderRadius.circular(999),
-                child: Image.asset(
-                  iconAssetPath,
-                  width: 44,
-                  height: 44,
-                  fit: BoxFit.cover,
-                ),
+                child: Image.asset(iconAssetPath, width: 44, height: 44, fit: BoxFit.cover),
               ),
             ],
           ),
@@ -325,30 +317,28 @@ class _BodySelectionScreenState extends State<BodySelectionScreen> {
               return;
             }
 
-            // ✅ PEDIR PERMISOS
+            final symptomText = _lesionOptionToText(_selectedLesionOption!);
+
             final granted = await PermissionsService.requestCameraAndGallery();
 
             if (!granted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text(
-                    'Necesitamos acceso a la cámara y galería para continuar.',
-                  ),
+                  content: Text('Necesitamos acceso a la cámara y galería para continuar.'),
                 ),
               );
               return;
             }
 
-            // ✅ IR AL ESCÁNER
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => SkinScanScreen(
-                  bodyPart: _selectedBodyPart!, // ✅ se conecta
+                  bodyPart: _selectedBodyPart!,
+                  symptom: symptomText, // ✅ ahora se envía
                 ),
               ),
             );
           },
-
           style: ElevatedButton.styleFrom(
             backgroundColor: kPrimaryColor,
             foregroundColor: Colors.white,

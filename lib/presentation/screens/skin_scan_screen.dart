@@ -5,11 +5,20 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:skin_cancer_detector/presentation/screens/processing_screen.dart';
 import 'package:skin_cancer_detector/services/tflite_classifier.dart';
+
 const Color kPrimaryColor = Color(0xFF11E9C4);
 
 class SkinScanScreen extends StatefulWidget {
   final String bodyPart;
-  const SkinScanScreen({super.key, required this.bodyPart});
+
+  // ✅ NUEVO: síntoma seleccionado antes del escaneo
+  final String symptom;
+
+  const SkinScanScreen({
+    super.key,
+    required this.bodyPart,
+    required this.symptom, // ✅ NUEVO
+  });
 
   @override
   State<SkinScanScreen> createState() => _SkinScanScreenState();
@@ -70,7 +79,6 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
   void dispose() {
     _cameraController?.dispose();
     // OJO: NO hagas dispose del classifier si lo reutilizas entre pantallas.
-    // Si quieres cerrarlo al salir totalmente de la app, hazlo en un singleton/provider.
     super.dispose();
   }
 
@@ -134,6 +142,7 @@ class _SkinScanScreenState extends State<SkinScanScreen> {
           builder: (_) => ProcessingScreen(
             imagePath: _selectedImage!.path,
             bodyPart: widget.bodyPart,
+            symptom: widget.symptom, // ✅ NUEVO: lo mandamos al flujo
             classifier: _classifier, // ✅
           ),
         ),
