@@ -15,7 +15,7 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
 
-  final List<String> _filters = const ['Todo', 'Espalda', 'Pecho', 'Rostro'];
+  final List<String> _filters = const ['Todo', 'Espalda', 'Pecho', 'Brazo izquierdo', 'Brazo derecho','Pierna derecha', 'Pierna izquierda', 'Cabeza'];
   int _selectedFilterIndex = 0;
 
   late Future<List<ScanHistoryItem>> _historyItemsFuture;
