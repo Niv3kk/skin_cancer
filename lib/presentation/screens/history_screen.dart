@@ -1,12 +1,8 @@
 // lib/presentation/screens/history_screen.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
-
 import 'package:skin_cancer_detector/core/models/scan_history_item.dart';
 import 'package:skin_cancer_detector/services/database_helper.dart';
-
-// ✅ NUEVO: detalle + export
 import 'package:skin_cancer_detector/presentation/screens/history_detail_screen.dart';
 import 'package:skin_cancer_detector/services/history_pdf_exporter.dart';
 
@@ -18,7 +14,7 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  // ✅ Filtros por partes del cuerpo
+
   final List<String> _filters = const ['Todo', 'Espalda', 'Pecho', 'Rostro'];
   int _selectedFilterIndex = 0;
 
@@ -282,7 +278,7 @@ class _HistoryCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 35,
-                  backgroundImage: MemoryImage(item.thumbnailBytes), // ✅ THUMBNAIL
+                  backgroundImage: MemoryImage(item.thumbnailBytes),
                 ),
                 const SizedBox(height: 8),
                 Text(
