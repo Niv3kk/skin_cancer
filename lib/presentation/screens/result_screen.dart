@@ -251,7 +251,7 @@ class ResultScreen extends StatelessWidget {
                             thumbnailBytes: thumbnailBytes,
                             imagePath: imagePath,
                             createdAt: DateTime.now().toIso8601String(),
-                            bodyPart: 'Sin especificar', // luego lo conectamos al body selector
+                            bodyPart: bodyPart,
                             label: result.label,
                             confidence: result.confidence,
                             recommendation: ui.recommendation,
